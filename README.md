@@ -179,7 +179,17 @@ jbo              console      Mar 28 10:43
 jbo              ttys003      Mar 28 10:44
 ```
 
-Interestingly, I was able to trigger a similar behavior from LDAP, which means this might be "remotely triggerable", albeit not a full RCE of course.
+Interestingly, I was able to trigger a similar behavior from LDAP, which means this might be "remotely triggerable", albeit not a full RCE of course.  
+This means that a post install script that I found in other packages is also vulnerable:
+
+```perl
+ my @users = split(/ /, `/usr/bin/users`);
+  foreach my $user (@users) {
+      system("/usr/bin/su", $user, "-c", "/System/Library/CoreServices/pbs -flush");
+  }
+```
+
+This is because the output of `/usr/bin/users` cannot be trusted as well.
 
 ## Summary
 There are some interesting takeaways from this vulnerability:

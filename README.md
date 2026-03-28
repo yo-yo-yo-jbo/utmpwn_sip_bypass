@@ -143,3 +143,6 @@ Exploitation is straightforward:
 5. Restore `/var/run/utmpx`.
 
 Indeed:
+![UTMPWN](utmpwn.png)
+
+I've added the exploit [here](utmpwn.py).

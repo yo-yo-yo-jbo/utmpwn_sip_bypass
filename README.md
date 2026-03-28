@@ -167,6 +167,8 @@ login -f 'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | b
 This simply works!  
 I also have done the experiment with an active directory server and LDAP, and was able to reproduce the same thing with LDAP.  
 This means this exploit might be "remotely triggerable" in *some* sense, but it's not really a remote code execution vulnerability.
+Note we have to avoid spaces and must include the word "console" for `who | grep "console" | cut -d " " -f 1` to succeed.
+
 
 ## Summary
 There are some interesting takeaways from this vulnerability:

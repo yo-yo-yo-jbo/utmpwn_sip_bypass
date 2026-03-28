@@ -138,7 +138,7 @@ That means I can write to the file, change the console (interactive) user to hav
 Exploitation is straightforward:
 1. Drop a payload to `/tmp/a.sh` - it will run arbitrary commands and have SIP bypassing capabilities.
 2. Backup `/var/run/utmpx` for good measure.
-3. Introduce backticks to the interactive user - use `getutxent` to find the relevant entry and override it (using `pututxline`) with a new entry that has the username ```/tmp/a.sh``` (note the backticks).
+3. Introduce backticks to the interactive user - use `getutxent` to find the relevant entry and override it (using `pututxline`) with a new entry that has the username \`/tmp/a.sh\` (note the backticks).
 4. Trigger the package installation with the `installer` utility.
 5. Restore `/var/run/utmpx`.
 

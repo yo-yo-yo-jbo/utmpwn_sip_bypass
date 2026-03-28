@@ -6,7 +6,7 @@ I've written about SIP [in a previous blogpost](https://github.com/yo-yo-yo-jbo/
 To give some context, here are SIP bypasses I have reported in the past:
 
 ### Shrootless - CVE-2021-30892
-[CVE-2021-30892 (AKA "Shrootless")](https://www.microsoft.com/en-us/security/blog/2021/10/28/microsoft-finds-new-macos-vulnerability-shrootless-that-could-bypass-system-integrity-protection/) was a PackageKit issue in `system_installd`.  
+[CVE-2021-30892 (AKA "Shrootless")](https://www.microsoft.com/en-us/security/blog/2021/10/28/microsoft-finds-new-macos-vulnerability-shrootless-that-could-bypass-system-integrity-protection/) was a PackageKit issue in `system_installd`, which is a small wrapper around a private framework known as `PackageKit`.  
 
 #### The issue
 I noticed pre/post install package scripts that run `zsh` were running commands from `/etc/zshenv` (or `~/.zshrc`).  
@@ -55,3 +55,35 @@ Apple's fixes were much more aggressive and included the following:
 3. Hardening `perl`: see [perl/5.34/fix
 /perl-rootless-v2.patch](https://github.com/apple-oss-distributions/perl/blob/0db21e813bcaf9d04dd2c322c1d90e4178549547/5.34/fix/perl-rootless-v2.patch).
 4. Dropping SIP bypassing capabilities via the `csops` call - before calling `bash` or `perl` from `systemmigrationd`.
+
+### CVE-2024-44243
+[CVE-2024-44243 (this time I didn't it give a cool name)](https://www.microsoft.com/en-us/security/blog/2025/01/13/analyzing-cve-2024-44243-a-macos-system-integrity-protection-bypass-through-kernel-extensions/) was a `storagekitd`-based SIP bypass.
+
+#### The issue
+Just like before, `storagekitd` has `com.apple.rootless.install.heritable`. I noticed in some situations, `storagekitd` calls what seems to be 3rd party executables, e.g. `/Library/Filesystems/iboysoft_NTFS.fs/Contents/Resources/newfs_ms_ntfs`.  
+Overriding them was easy and bypasses SIP - the challenge was triggering those without installing a 3rd party software, and involved spoofing a new type of "filesystem" (UserFS) as well as installing 3rd party kernel extensions.
+
+#### The fix
+In this case the fix seemed completely tactical: `storagekitd` seemed to drop the SIP bypassing capabilities before calling those binaries.
+
+## Motivation
+So, in 2026, the state of SIP is the following:
+- Only 3 `com.apple.rootless.install.heritable` binaries on a modern system
+  - [Launch Constraints](https://theevilbit.github.io/posts/launch_constraints_deep_dive/) and [Runtime Hardening](https://developer.apple.com/documentation/security/hardened-runtime) prevent many of the old tricks
+  - Cannot affect environment variables under launchd anymore
+  - Cannot signal protected daemons such as system_installd
+- PackageKit is super hardened
+  - Many mechanisms to drop SIP before transferring control to scripts
+  - Dedicated hardening on `zsh`, `bash` and `perl` that limit scripts and modules that could be run
+- [Sealed System Volume (SSV)](https://support.apple.com/guide/security/signed-system-volume-security-secd698747c9/web) basically locks all immutable files under `/System`.
+- Technologies such as [PAC](https://developer.apple.com/documentation/Security/preparing-your-app-to-work-with-pointer-authentication) and [MTE](https://security.apple.com/blog/memory-integrity-enforcement/) make running code in the context of privileged processes very unlikely (but not impossible).
+
+Because I am fairly familiar with `systemmigrationd` and `packagekitd`, and since [some researchers](https://github.com/jhftss) keep finding vulnerabilities in PackageKit, I figured finding another `system_installd`-based SIP bypass was a good idea.  
+I've decided to download tons of signed packages similarly to how [Iru has done](https://www.iru.com/blog/finding-vulnerabilities-in-apple-packages) in January 2026.
+
+## Failed ideas
+I had some ideas that failed:
+1. I found issues that rely on a non-root target installation. You can use the `installer` utility to give a different target than /, which affects pre/post install scripts - particularly, argument `$3`. However, I quickly realized that in these situations `installd` is invoked instead of `system_installd`, which makes things a bit pointless for SIP bypassing purposes.
+2. I reslized I could affect the `perl` module search order (known as [@INC](https://perldoc.perl.org/variables/@INC)) - in macOS, when `perl` is launched it will search for the file `/Library/Perl/5.34/PrependToPath` (there is also `/Library/Perl/5.34/AppendToPath`) and add all modules there to `@INC`. I confirmed this happens always (including when `perl` has SIP bypassing capabilities). However, Apple has introduced several [patches](https://github.com/apple-oss-distributions/perl/blob/0db21e813bcaf9d04dd2c322c1d90e4178549547/5.34/fix/perl-rootless-check-fd.patch) to perl that make untrusted modules not load, so I could not do a "module hijacking" on Perl.
+3. I noticed pre/post install scripts that start with `#!/bin/sh` ended up running `bash` instead! Apparently, `/bin/sh` is not a real shell on macOS - it will consult a symlink under `/private/var/select/sh`. If you change the symlink to a binary that is not `/bin/zsh`, `/bin/bash` or `/bin/dash` - `/bin/sh` will default to running `/bin/bash`, and there are no easy tricks (like race conditions) that could be abused. I then thought that maybe Apple forgot to harden `/bin/dash` (because I saw the `zsh` and `bash` sources), but that's not the case - `dash` is also hardened.
+

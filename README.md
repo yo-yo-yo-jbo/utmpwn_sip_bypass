@@ -133,3 +133,13 @@ I decided to take a closer look, and `who` apparently uses an API called [getutx
 Those are entries in an old UNIX relic of a "login accounting system" which is known as [utmp](https://en.wikipedia.org/wiki/Utmp).  
 More interestingly, those records are saved in a file `/var/run/utmpx` which is not SIP protected!  
 That means I can write to the file, change the console (interactive) user to have backticks and be done with it.
+
+## Exploitation
+Exploitation is straightforward:
+1. Drop a payload to `/tmp/a.sh` - it will run arbitrary commands and have SIP bypassing capabilities.
+2. Backup `/var/run/utmpx` for good measure.
+3. Introduce backticks to the interactive user - use `getutxent` to find the relevant entry and override it (using `pututxline`) with a new entry that has the username ```/tmp/a.sh``` (note the backticks).
+4. Trigger the package installation with the `installer` utility.
+5. Restore `/var/run/utmpx`.
+
+Indeed:

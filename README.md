@@ -146,3 +146,13 @@ Indeed:
 ![UTMPWN](utmpwn.png)
 
 I've added the exploit [here](utmpwn.py).
+
+## Summary
+There are some interesting takeaways from this vulnerability:
+1. Even well-reviewed security features such as Apple's SIP can have very subtle issues that turn into vulnerabilities. Assumptions such as sanitization of the `who` output can lead to exploitation.
+2. Do not blindly trust LLMs - the most advanced public model of Claude at the time had many false positives and at least one false negative. It's still necessary to have a human in the loop.
+3. This was a tactical find - I guess finding new SIP bypasses is going to become ever harder, unless Apple adds new binaries with SIP bypassing entitlements that could be exploited.
+
+Stay tuned!
+
+Jonathan Bar Or

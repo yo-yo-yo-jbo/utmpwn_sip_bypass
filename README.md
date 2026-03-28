@@ -1,4 +1,4 @@
-# UTMPWN
+# A new SIP bypass - UTMPWN
 In March 2026, I've decided to look for a new SIP bypasses.  
 I've written about SIP [in a previous blogpost](https://github.com/yo-yo-yo-jbo/macos_sip/) and myself have contributed some bypasses over the years.
 
@@ -87,3 +87,49 @@ I had some ideas that failed:
 2. I reslized I could affect the `perl` module search order (known as [@INC](https://perldoc.perl.org/variables/@INC)) - in macOS, when `perl` is launched it will search for the file `/Library/Perl/5.34/PrependToPath` (there is also `/Library/Perl/5.34/AppendToPath`) and add all modules there to `@INC`. I confirmed this happens always (including when `perl` has SIP bypassing capabilities). However, Apple has introduced several [patches](https://github.com/apple-oss-distributions/perl/blob/0db21e813bcaf9d04dd2c322c1d90e4178549547/5.34/fix/perl-rootless-check-fd.patch) to perl that make untrusted modules not load, so I could not do a "module hijacking" on Perl.
 3. I noticed pre/post install scripts that start with `#!/bin/sh` ended up running `bash` instead! Apparently, `/bin/sh` is not a real shell on macOS - it will consult a symlink under `/private/var/select/sh`. If you change the symlink to a binary that is not `/bin/zsh`, `/bin/bash` or `/bin/dash` - `/bin/sh` will default to running `/bin/bash`, and there are no easy tricks (like race conditions) that could be abused. I then thought that maybe Apple forgot to harden `/bin/dash` (because I saw the `zsh` and `bash` sources), but that's not the case - `dash` is also hardened.
 
+## Using LLMs for the task
+I automated downloading, extracting and assessing all pre/post install scripts, and used [Claude Code](https://code.claude.com/docs/en/overview) to do so. It offered several leads, and I asked it to research further and try to exploit each of them.  
+Interestingly, out of 9 issues it found, it gave up on 7, and left 2 which I looked at personally and found to be useless.  
+I decided that I personally wanted to take a closer look at the 7 Claude claimed could not be exploited, and looked at the package `Safari26.3.1SequoiaAuto.pkg` (sha1 = 20e778de14dba85790cc663983d241caa2429f6f), specifically the script `Scripts/postinstall_actions/loadSafariBookmarksSyncAgent`:
+
+```perl
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+my @users = `who |grep "console" | cut -d " " -f 1`;
+my $pathToSafariBookmarksSyncAgentPlist = '/System/Library/LaunchAgents/com.apple.SafariBookmarksSyncAgent.plist';
+
+foreach my $user (@users) {
+    chomp($user);
+    my $uid = `id -u  $user`;
+    chomp($uid);
+    system("launchctl asuser $uid launchctl kill 9 gui/$uid/com.apple.SafariBookmarksSyncAgent");
+    system("launchctl asuser $uid launchctl unload $pathToSafariBookmarksSyncAgentPlist");
+    system("launchctl asuser $uid launchctl load $pathToSafariBookmarksSyncAgentPlist");
+}
+```
+
+Claude realized there is a command injection opportunity here if the output of `who` has shell-escaping characters such as backticks, but since users on macOS can only be alphanumeric (with underscores and other uninteresting characters) - it could not be done.  
+I tried and indeed - `dscl` (nor the GUI) won't let me create usernames with backticks. Maybe in LDAP-controlled environment it could be done - but I did not have the environment to do so.  
+I decided then to see if I could affect the `who` utility in a different way - if the `who` utility indeed examines the users, I'd expect it to import `DirectoryService.framework`. Here's a comparison between `who` and `dscl`:
+
+```
+jbo@JBOs-MacBook-Pro ~ % otool -L $(which dscl)
+/usr/bin/dscl:
+	/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation (compatibility version 300.0.0, current version 4423.1.0)
+	/System/Library/Frameworks/DirectoryService.framework/Versions/A/DirectoryService (compatibility version 1.0.0, current version 1.0.0)
+	/usr/lib/libedit.3.dylib (compatibility version 2.0.0, current version 3.0.0)
+	/usr/lib/libobjc.A.dylib (compatibility version 1.0.0, current version 228.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+	/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation (compatibility version 150.0.0, current version 4423.1.0)
+jbo@JBOs-MacBook-Pro ~ % otool -L $(which who)
+/usr/bin/who:
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+```
+
+You can see how `dscl` imports `DirectoryService`, but `who` only uses `libSystem`, which I find suspicious.  
+I decided to take a closer look, and `who` apparently uses an API called [getutxent](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/getutxent.3.html).  
+Those are entries in an old UNIX relic of a "login accounting system" which is known as [utmp](https://en.wikipedia.org/wiki/Utmp).  
+More interestingly, those records are saved in a file `/var/run/utmpx` which is not SIP protected!  
+That means I can write to the file, change the console (interactive) user to have backticks and be done with it.

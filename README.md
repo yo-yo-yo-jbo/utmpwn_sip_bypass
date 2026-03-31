@@ -179,17 +179,49 @@ jbo              console      Mar 28 10:43
 jbo              ttys003      Mar 28 10:44
 ```
 
-Interestingly, I was able to trigger a similar behavior from LDAP, which means this might be "remotely triggerable", albeit not a full RCE of course.  
-This means that a post install script that I found in other packages is also vulnerable:
+Interestingly, I was able to trigger a similar behavior from LDAP, which means this might be "remotely triggerable", albeit not a full RCE of course.
+
+### Another post-install script
+Here is a post install script that I found in other packages:
 
 ```perl
- my @users = split(/ /, `/usr/bin/users`);
-  foreach my $user (@users) {
-      system("/usr/bin/su", $user, "-c", "/System/Library/CoreServices/pbs -flush");
-  }
+#!/usr/bin/perl
+
+####################################
+# yes this is secure
+my $debug = (-e "/tmp/com.apple.pkg.testing");
+my $commandToDoForEveryone = "/System/Library/CoreServices/pbs -flush";
+
+my @users = split(/ /,`/usr/bin/users`);
+    debuglog("Found " . scalar @users . " logged in.");
+
+foreach my $user (@users)
+{
+    chomp $user;
+        debuglog("Updating Services Menu for user '" . $user ."'");
+    system("/usr/bin/su", $user, "-c", $commandToDoForEveryone);
+}
+
+
+########################################################
+# always exit 0
+exit 0;
+
+
+########################################################
+sub debuglog 
+{
+	# $_[0] is the argument to debuglog, the match at the front is to print the name of this script
+	system("logger -p install.info '@{[$0 =~ m|([^/]+$)|]}: $_[0]'") if ( $debug );
+}
 ```
 
-This is because the output of `/usr/bin/users` cannot be trusted as well.
+Some notes:
+1. I find it funny that there is a comment that states "yes this is secure". I know it refers to testing whether a trigger file exists under `/tmp`, but I still find it interesting, as this script is vulnerable to a command-injection.
+2. As attackers, we can make `$debug` be true since we can simply create the file `/tmp/com.apple.pkg.testing`.
+3. Moving on, the `$users` variable is the output of the `/usr/bin/users` utility, which also reads `/var/run/utmpx`, and thus attacker-controlled.
+4. The first `system` call is fine (the one for each user) - because `system` is invoked with an array - it's not vulnerable to any injection. However, before that - we call the `debuglog` subroutine.
+5. The `debuglog` subroutine calls `system` insecurely - it concatenates the user string (as long as `$debug` is true).
 
 ## Summary
 There are some interesting takeaways from this vulnerability:

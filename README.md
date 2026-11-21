@@ -1,6 +1,7 @@
 # A new SIP bypass - UTMPWN
 In March 2026, I've decided to look for a new SIP bypasses.  
-I've written about SIP [in a previous blogpost](https://github.com/yo-yo-yo-jbo/macos_sip/) and myself have contributed some bypasses over the years.
+I've written about SIP [in a previous blogpost](https://github.com/yo-yo-yo-jbo/macos_sip/) and myself have contributed some bypasses over the years.  
+Shout out to [Gergely Kalman](https://gergelykalman.com/) who discovered the same thing that I did - around the same time.
 
 ## SIP bypasses I have reported in the past
 To give some context, here are SIP bypasses I have reported in the past:
@@ -231,4 +232,4 @@ There are some interesting takeaways from this vulnerability:
 
 Stay tuned!
 
-Jonathan Bar Or
+Jonathan Bar Or (https://jonathanbaror.com)
